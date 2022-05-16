@@ -5,6 +5,8 @@
 
 #include <Tests/General/LoadSaveSceneTest.h>
 #include <Math/Perlin.h>
+#include <Jolt/Core/StreamWrapper.h>
+#include <Layers.h>
 #include <Jolt/ObjectStream/ObjectStreamOut.h>
 #include <Jolt/ObjectStream/ObjectStreamIn.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
@@ -181,20 +183,22 @@ Ref<PhysicsScene> LoadSaveSceneTest::sCreateScene()
 
 void LoadSaveSceneTest::Initialize()
 {
-	Ref<PhysicsScene> scene = sCreateScene();
-
-	stringstream data;
-
-	// Write scene
-	if (!ObjectStreamOut::sWriteObject(data, ObjectStream::EStreamType::Text, *scene))
-		FatalError("Failed to save scene");
-
-	// Clear scene
-	scene = nullptr;
-
-	// Read scene back in
-	if (!ObjectStreamIn::sReadObject(data, scene))
-		FatalError("Failed to load scene");
+	std::ifstream test( "C:\\Program Files (x86)\\Steam\\steamapps\\common\\GarrysMod\\test.bof", std::ios::binary );
+	JPH::StreamInWrapper wrapper( test );
+	auto res = PhysicsScene::sRestoreFromBinaryState( wrapper );
+	auto scene = res.Get();
+	//if (!ObjectStreamIn::sReadObject((string("Assets/") + sSceneName + ".bof").c_str(), scene))
+	//	FatalError("Failed to load scene");
+	scene->FixInvalidScales();
+	for (BodyCreationSettings &settings : scene->GetBodies())
+	{
+		if ( settings.mObjectLayer == 0 )
+			settings.mObjectLayer = Layers::NON_MOVING;
+		else if ( settings.mObjectLayer == 1 )
+			settings.mObjectLayer = Layers::NON_MOVING;
+		else
+			settings.mObjectLayer = Layers::MOVING;
+	}
 
 	// Instantiate scene
 	scene->CreateBodies(mPhysicsSystem);
